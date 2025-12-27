@@ -14,7 +14,7 @@ substitutions:
   
   # === ID PROJEKTU (PROJECT ID) ===
   project_name: "KRISUUUU.voice-satellite"
-  project_version: "0.1.0"
+  project_version: "0.1.1"
   
   # === PINY SPRZĘTOWE (HARDWARE PINS) ===
   i2s_bclk: GPIO15  # Zegar Bitowy / Bit Clock (BCLK)
@@ -40,14 +40,16 @@ esphome:
   on_boot:
     - priority: 600
       then:
-        # Startowy test LED / Startup LED Test
+        # Startowy test LED - Tęcza / Startup Rainbow Effect
         - light.turn_on:
             id: led_ring
-            brightness: 60%
-            blue: 100%
-            effect: none
-        - delay: 1s
+            brightness: 80%
+            effect: "Startup Rainbow"
+        - delay: 3s
         - light.turn_off: led_ring
+        - light.control:
+            id: led_ring
+            effect: none
         # Autostart nasłuchiwania / Auto-start listening
         - micro_wake_word.start:
 
@@ -60,6 +62,7 @@ esp32:
       CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
       CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
       CONFIG_ESP32S3_INST_CACHE_64KB: "y"
+      CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE: "4096"
   flash_size: 8MB
 
 psram:
@@ -71,11 +74,6 @@ wifi:
   password: !secret wifi_password
   power_save_mode: NONE # Wymagane dla stabilnego audio / Required for stable audio
   
-  # ==========================================================================
-  # !!! UWAGA / WARNING !!!
-  # Zmień poniższe adresy IP na pasujące do Twojej sieci!
-  # Change the IP addresses below to match your network configuration!
-  # ==========================================================================
   manual_ip:
     static_ip: 10.0.50.177
     gateway: 10.0.50.1
@@ -90,7 +88,6 @@ api:
   encryption:
     key: !secret api_key
   
-  # Reakcja na połączenie z HA / HA Connection Feedback
   on_client_connected:
     - logger.log: "Connected to Home Assistant API"
     - light.turn_on:
@@ -170,6 +167,12 @@ light:
     chipset: WS2812
     restore_mode: ALWAYS_OFF
     effects:
+      # TĘCZA: Poprawna definicja dla paska adresowalnego
+      - addressable_rainbow:
+          name: "Startup Rainbow"
+          speed: 10
+          width: 360
+          
       - strobe:
           name: "Flash"
           colors:
@@ -182,40 +185,55 @@ light:
             - state: false
               duration: 100ms
               
+      # SŁUCHANIE: Długi niebieski wężyk w PRAWO
       - addressable_lambda:
-          name: "Listening Scanner"
-          update_interval: 50ms
-          lambda: |-
-            static int center = 0;
-            static int direction = 1;
-            it.all() = Color::BLACK;
-            it[center] = Color(0, 0, 255); 
-            int prev = (center - 1 + it.size()) % it.size();
-            int next = (center + 1) % it.size();
-            it[prev] = Color(0, 0, 80);
-            it[next] = Color(0, 0, 80);
-            center += direction;
-            if (center >= it.size() - 1 || center <= 0) direction *= -1;
-            
-      - addressable_lambda:
-          name: "Thinking Breath"
-          update_interval: 20ms
-          lambda: |-
-            static float progress = 0.0;
-            float brightness = (sin(progress) + 1.0) / 2.0; 
-            it.all() = Color(0, 255, 50) * brightness;
-            progress += 0.1;
-            
-      - addressable_lambda:
-          name: "Speaking Sparkle"
+          name: "Listening Right"
           update_interval: 60ms
           lambda: |-
+            static int step = 0;
             it.all() = Color::BLACK;
-            for (int i = 0; i < it.size(); i++) {
-               if (random() % 3 == 0) {
-                 it[i] = Color(150, 0, 255) * ((random() % 100) / 100.0);
-               }
-            }
+            int size = it.size();
+            int pos = step % size;
+            
+            it[pos] = Color(0, 0, 255);
+            it[(pos - 1 + size) % size] = Color(0, 0, 200);
+            it[(pos - 2 + size) % size] = Color(0, 0, 150);
+            it[(pos - 3 + size) % size] = Color(0, 0, 100);
+            it[(pos - 4 + size) % size] = Color(0, 0, 50);
+            it[(pos - 5 + size) % size] = Color(0, 0, 20);
+            
+            step++;
+
+      # MYŚLENIE: Niebieskie pulsowanie diod 3 i 9
+      - addressable_lambda:
+          name: "Thinking Pulse"
+          update_interval: 20ms
+          lambda: |-
+            float pulse = sin(millis() * 0.01f);
+            int val = (pulse + 1.0f) * 127.0f;
+            it.all() = Color::BLACK;
+            it[3] = Color(0, 0, val);
+            it[9] = Color(0, 0, val);
+
+      # ODPOWIADANIE: Długi niebieski wężyk w LEWO
+      - addressable_lambda:
+          name: "Speaking Left"
+          update_interval: 60ms
+          lambda: |-
+            static int step = 1200;
+            it.all() = Color::BLACK;
+            int size = it.size();
+            int pos = step % size;
+            
+            it[pos] = Color(0, 0, 255);
+            it[(pos + 1) % size] = Color(0, 0, 200);
+            it[(pos + 2) % size] = Color(0, 0, 150);
+            it[(pos + 3) % size] = Color(0, 0, 100);
+            it[(pos + 4) % size] = Color(0, 0, 50);
+            it[(pos + 5) % size] = Color(0, 0, 20);
+            
+            step--;
+            if (step < 0) step = 1200;
 
 # === WAKE WORD (OKAY NABU) ===
 micro_wake_word:
@@ -229,10 +247,6 @@ micro_wake_word:
   on_wake_word_detected:
     - voice_assistant.start:
         wake_word: !lambda return wake_word;
-    - light.turn_on:
-        id: led_ring
-        brightness: 80%
-        effect: "Listening Scanner"
 
 # === LOGIKA ASYSTENTA (ASSISTANT LOGIC) ===
 voice_assistant:
@@ -245,25 +259,34 @@ voice_assistant:
   on_listening:
     - light.turn_on:
         id: led_ring
-        brightness: 80%
-        effect: "Listening Scanner"
+        brightness: 100%
+        effect: "Listening Right"
   
   on_stt_vad_end:
-    - light.turn_on:
+    - light.control:
         id: led_ring
-        brightness: 60%
-        effect: "Thinking Breath"
-        
-  on_tts_start:
+        effect: "none"
     - light.turn_on:
         id: led_ring
         brightness: 80%
-        effect: "Speaking Sparkle"
+        effect: "Thinking Pulse"
+        
+  on_tts_start:
+    - light.control:
+        id: led_ring
+        effect: "none"
+    - light.turn_on:
+        id: led_ring
+        brightness: 100%
+        effect: "Speaking Left"
   
   on_end:
-    - delay: 1s
+    - delay: 800ms
     - light.turn_off: led_ring
-    # Restart nasłuchiwania (Loop Fix) / Restart listening loop
+    - light.control:
+        id: led_ring
+        effect: none
+    # Restart nasłuchiwania
     - micro_wake_word.start:
   
   on_error:
@@ -274,7 +297,6 @@ voice_assistant:
         effect: none
     - delay: 2s
     - light.turn_off: led_ring
-    # Restart po błędzie / Restart after error
     - micro_wake_word.start:
 
 # === PRZYCISKI STERUJĄCE (CONTROL BUTTONS) ===
@@ -288,15 +310,3 @@ button:
     icon: "mdi:account-voice"
     on_press:
       - voice_assistant.start:
-  
-  - platform: template
-    name: "Test LED"
-    icon: "mdi:led-on"
-    on_press:
-      - light.turn_on:
-          id: led_ring
-          brightness: 100%
-          blue: 100%
-          effect: none
-      - delay: 1s
-      - light.turn_off: led_ring
