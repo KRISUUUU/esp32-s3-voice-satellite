@@ -1,0 +1,70 @@
+name: ESPHome Build Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**.yaml'
+      - '**.yml'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Test ESPHome Compilation
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install ESPHome
+      run: |
+        pip install esphome
+        
+    - name: Create dummy secrets.yaml
+      # Tworzymy fałszywe sekrety, żeby kompilator ESPHome nie krzyczał o błędy
+      run: |
+        cat > secrets.yaml << EOF
+        wifi_ssid: "TestSSID"
+        wifi_password: "TestPassword"
+        api_key: "dGVzdF9hcGlfa2V5X2Zvcl9naXRodWJfYWN0aW9ucw=="
+        ota_password: "test_ota_password"
+        ap_password: "test_ap_password"
+        EOF
+        
+    - name: Validate YAML syntax
+      run: |
+        esphome config voice_assistant.yaml
+        
+    - name: Compile firmware (dry-run)
+      # Sprawdza czy kod się kompiluje, ale nie buduje pełnego binary (oszczędza czas)
+      run: |
+        esphome compile voice_assistant.yaml
+        
+    - name: Security Check - Hardcoded Passwords
+      # Szuka haseł wpisanych "na twardo" w plikach YAML (niebezpieczne!)
+      run: |
+        # Ignorujemy secrets.yaml (bo to dummy) i szukamy podejrzanych linii
+        if grep -r "password: \"" *.yaml | grep -v "!secret"; then
+          echo "❌ ERROR: Found hardcoded passwords in YAML files! Use !secret instead."
+          exit 1
+        fi
+        echo "✅ No hardcoded secrets found"
+        
+    - name: Check file structure
+      # Sprawdza czy najważniejsze pliki istnieją
+      run: |
+        required_files="voice_assistant.yaml README.md README_EN.md LICENSE"
+        for file in $required_files; do
+          if [ ! -f "$file" ]; then
+            echo "❌ ERROR: Required file missing: $file"
+            exit 1
+          fi
+        done
+        echo "✅ All required files present"

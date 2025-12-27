@@ -1,0 +1,97 @@
+# 🔌 ESP32-S3 Voice Satellite – Wiring Diagram
+
+Dokumentacja połączeń dla projektu **ESP32-S3 Voice Satellite**.  
+Układ oparty jest na **Wspólnej Magistrali Audio (Shared I2S Bus)**, co oznacza, że zegary **BCLK** oraz **LRCLK** są współdzielone przez mikrofon i wzmacniacze.
+
+---
+
+## 🗺️ Mapa Pinów (Master Pinout)
+
+| Pin ESP32 | Funkcja (Kod) | Podłączone Urządzenia | Uwagi (Kluczowe!) |
+|---------|---------------|-----------------------|------------------|
+| GPIO 15 | `i2s_bclk` | Mic + Amp 1 + Amp 2 | Mostek – jeden sygnał na 3 urządzenia |
+| GPIO 16 | `i2s_lrclk` | Mic + Amp 1 + Amp 2 | Mostek – jeden sygnał na 3 urządzenia |
+| GPIO 6  | `mic_data` | Mikrofon (SD) | Tylko mikrofon |
+| GPIO 11 | `amp_data` | Amp 1 + Amp 2 (DIN) | Mostek – sygnał do obu wzmacniaczy |
+| GPIO 21 | `led_pin` | LED Ring (DI) | Bezpośrednie połączenie |
+| 5V (VBUS) | Power | Amps, LED | Główne zasilanie |
+| 3.3V | Power | Mikrofon | Tylko mikrofon – 5V go uszkodzi |
+| GND | Ground | WSZYSTKIE | Wspólna masa wymagana |
+
+---
+
+## ⚡ Schemat Zasilania (Power Distribution)
+
+```mermaid
+graph TD
+    USB[Zasilacz USB 5V 3A] --> FUSE[Bezpiecznik]
+    FUSE --> WAGO_5V((WAGO +5V))
+
+    WAGO_5V --> |Vin| ESP32[ESP32-S3]
+    WAGO_5V --> |Vin + Kondensator| AMP1[Wzmacniacz 1]
+    WAGO_5V --> |Vin + Kondensator| AMP2[Wzmacniacz 2]
+    WAGO_5V --> |5V + Kondensator| LED[LED Ring]
+
+    USB_GND[GND] --> WAGO_GND((WAGO GND))
+    WAGO_GND --> ESP32
+    WAGO_GND --> AMP1
+    WAGO_GND --> AMP2
+    WAGO_GND --> LED
+    WAGO_GND --> MIC[Mikrofon INMP441]
+
+    ESP32 -.-> |3.3V| MIC
+```
+
+---
+
+## 🔊 Schemat Audio (I2S – Shared Bus)
+
+```
+[ESP32 GPIO 15] ──┬── [Mic SCK]
+                  ├── [Amp1 BCLK]
+                  └── [Amp2 BCLK]
+
+[ESP32 GPIO 16] ──┬── [Mic WS]
+                  ├── [Amp1 LRC]
+                  └── [Amp2 LRC]
+
+[ESP32 GPIO 11] ──┬── [Amp1 DIN]
+                  └── [Amp2 DIN]
+
+[ESP32 GPIO 6 ] ───── [Mic SD]
+```
+
+---
+
+## 📋 Szczegóły Komponentów
+
+### Mikrofon – INMP441
+- VDD: 3.3V  
+- GND: GND  
+- SD: GPIO 6  
+- WS: GPIO 16  
+- SCK: GPIO 15  
+- L/R: GND  
+
+### Wzmacniacze – 2× MAX98357A
+- VIN: 5V  
+- GND: GND  
+- DIN: GPIO 11  
+- LRC: GPIO 16  
+- BCLK: GPIO 15  
+- SD_MODE: VIN  
+
+### LED Ring – WS2812B
+- 5V: 5V  
+- GND: GND  
+- DI: GPIO 21  
+
+---
+
+## ✅ Lista Kontrolna
+
+- [ ] Mikrofon na 3.3V  
+- [ ] Wspólna masa  
+- [ ] Poprawne mostki GPIO 15 i 16  
+- [ ] Brak zwarć  
+- [ ] Kondensatory przy LED i AMP  

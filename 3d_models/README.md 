@@ -1,0 +1,55 @@
+# 3D Models
+
+This directory contains STL files for 3D printing the voice satellite enclosure.
+
+## Files
+
+- **pokrywa.stl** - Top cover/lid
+- **maskownica.stl** - Speaker grille
+- **glosnik.stl** - Speaker mount/holder
+
+## Printing Settings
+
+### Recommended Settings
+- **Layer Height:** 0.2mm
+- **Infill:** 20%
+- **Material:** PLA or PETG
+- **Supports:** Not required
+- **Brim/Raft:** Optional (depends on bed adhesion)
+
+### Print Time
+Approximately 4-6 hours total for all parts (on standard 0.4mm nozzle printer).
+
+## Assembly
+
+1. Print all three parts
+2. Install WS2812B LED ring inside the lid (`pokrywa.stl`)
+3. Mount MAX98357A speaker in holder (`glosnik.stl`)
+4. Attach speaker grille (`maskownica.stl`)
+5. Route cables through designated channels
+6. Secure ESP32-S3 board inside enclosure
+
+## Source & Credits
+
+These 3D models were adapted from the original project by **Kristopher Mackowiak**:
+- **Original Repository:** [ha_voice_assistant](https://github.com/KristopherMackowiak/ha_voice_assistant)
+- **License:** MIT License
+- **Modifications:** None (used as-is)
+
+If you modify these models, please maintain attribution to the original author.
+
+## Customization
+
+Want to modify the enclosure? Source files and design notes may be available in the original repository. Consider:
+- Adding cable management clips
+- Changing dimensions for different speakers
+- Adding mounting holes for wall installation
+- Creating a desk stand version
+
+## Sharing Your Build
+
+Built your own? Share photos in [Discussions](../../discussions) or tag the project on social media!
+
+---
+
+**Note:** Always check printer compatibility and material safety for electronic enclosures.
