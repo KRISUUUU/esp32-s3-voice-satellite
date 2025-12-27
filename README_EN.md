@@ -1,20 +1,23 @@
+[🇵🇱 Wersja polska](README.md) | 🇬🇧 English version
+
 # ESP32-S3 Voice Satellite for Home Assistant
 
-![Project Status](https://img.shields.io/badge/status-production--ready-green)
+![Project Status](https://img.shields.io/badge/Status-Beta-yellow)
 ![ESPHome](https://img.shields.io/badge/ESPHome-2024.12.0+-blue)
 ![C++](https://img.shields.io/badge/Native_Logic-C++-orange)
-![License](https://img.shields.io/badge/license-MIT-grey)
+![License](https://img.shields.io/badge/License-MIT-grey)
+[![BuyCoffee](https://img.shields.io/badge/BuyCoffee.to-Support-green?logo=buy-coffee&logoColor=white)](https://buycoffee.to/Krisuuuu)
 
-*[Wersja polska](README.md) | English version*
+> ⚠️ **Project Status:** This is an early working version under active development. Core features are stable, but new functionality is being added frequently.
 
-High-performance voice satellite for Home Assistant based on ESP32-S3. This project utilizes the I2S protocol for high-quality audio (Dual Mono configuration) and a WS2812B LED ring for visual feedback.
+Advanced voice satellite for Home Assistant based on ESP32-S3. The project utilizes the I2S protocol for high-quality audio (Dual Mono - high volume) and a WS2812B LED ring for visual feedback.
 
 ## ✨ Features
-- **On-Device Wake Word:** Supports "Okay Nabu" running locally (Micro Wake Word).
+- **Local Wake Word:** Supports "Okay Nabu" (Micro Wake Word) directly on the device.
 - **Dual Mono Audio:** Supports two MAX98357A amplifiers on a single data line.
-- **32-bit I2S Sync:** Stable, shared audio bus configuration (glitch-free).
-- **Visual Feedback:** LED animations for Listening, Thinking, Speaking, and Error states.
-- **Push-to-Talk:** Manual trigger button in Home Assistant.
+- **Stability:** Optimized I2S configuration (32-bit) and power filtering.
+- **Visual Feedback:** LED animations for states: Listening, Thinking, Speaking, Error.
+- **Push-to-Talk:** Home Assistant button for manual assistant triggering.
 
 ---
 
@@ -157,10 +160,11 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🌟 Support the Project
 
-- ⭐ Star on GitHub
-- 🐛 Report bugs via Issues
-- 💡 Suggest features
-- 🔀 Submit Pull Requests
+Developing this project involves hundreds of hours of coding and hardware testing. If you enjoy my work, please consider supporting me:
+
+- ⭐ **Star the project** on GitHub (it's free and helps visibility!)
+- 💖 **Become a Sponsor** via [GitHub Sponsors](https://github.com/sponsors/KRISUUUU) (0% fees, monthly support)
+- ☕ **Buy me a coffee** via [BuyCoffee.to](https://buycoffee.to/Krisuuuu) (one-time support via BLIK/Przelewy24)
 
 ---
 

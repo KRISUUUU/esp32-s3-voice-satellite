@@ -1,9 +1,14 @@
+🇵🇱 Wersja polska | [🇬🇧 English version](README_EN.md)
+
 # ESP32-S3 Voice Satellite dla Home Assistant
 
-![Status Projektu](https://img.shields.io/badge/status-produkcyjny-green)
+![Status Projektu](https://img.shields.io/badge/Status-Beta-yellow)
 ![ESPHome](https://img.shields.io/badge/ESPHome-2024.12.0+-blue)
 ![C++](https://img.shields.io/badge/Logika_Natywna-C++-orange)
 ![Licencja](https://img.shields.io/badge/licencja-MIT-grey)
+[![BuyCoffee](https://img.shields.io/badge/BuyCoffee.to-Wspieraj-green?logo=buy-coffee&logoColor=white)](https://buycoffee.to/Krisuuuu)
+
+> ⚠️ **Status Projektu:** To jest wczesna, działająca wersja będąca w fazie aktywnego rozwoju. Podstawowe funkcje są stabilne, ale nowe funkcjonalności są dodawane na bieżąco.
 
 Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wykorzystuje protokół I2S dla dźwięku wysokiej jakości (Dual Mono - wysoka głośność) oraz pierścień LED WS2812B dla wizualnej informacji zwrotnej.
 
@@ -155,10 +160,11 @@ MIT License - szczegóły w [LICENSE](LICENSE)
 
 ## 🌟 Wspieraj Projekt
 
-- ⭐ Gwiazdka na GitHubie
-- 🐛 Zgłaszanie błędów
-- 💡 Propozycje funkcji
-- 🔀 Pull Requests
+Rozwój projektu to setki godzin kodowania i testowania sprzętu. Jeśli podoba Ci się to, co robię:
+
+- ⭐ **Daj Gwiazdkę** na GitHubie (to darmowe i pomaga zasięgom!)
+- 💖 **Zostań Sponsorem** przez [GitHub Sponsors](https://github.com/sponsors/KRISUUUU) (0% prowizji, wsparcie miesięczne)
+- ☕ **Postaw Kawę** przez [BuyCoffee.to](https://buycoffee.to/Krisuuuu) (wsparcie przez BLIK/Przelewy24)
 
 ---
 
