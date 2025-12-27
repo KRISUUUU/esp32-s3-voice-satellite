@@ -1,4 +1,4 @@
-name: ESPHome Build & Security Test
+name: Firmware Check
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch: # Pozwala uruchomić ręcznie guzikie w Actions
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,13 +22,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # Przyspiesza instalację przy kolejnych uruchomieniach
 
       - name: 🔧 Install ESPHome
         run: pip install esphome
 
       - name: 🔐 Create dummy secrets.yaml
-        # Tworzymy fałszywe dane, żeby walidacja przeszła
         run: |
           cat > secrets.yaml << EOF
           wifi_ssid: "CI_TEST_SSID"
@@ -42,16 +40,14 @@ jobs:
         run: esphome config voice_assistant.yaml
 
       - name: 🛡️ Security Check - Hardcoded Passwords
-        # Sprawdza, czy nie wpisałeś hasła jawnym tekstem
         run: |
           if grep -r "password: \"" *.yaml | grep -v "!secret" | grep -v "secrets.yaml"; then
             echo "❌ CRITICAL ERROR: Found hardcoded passwords in YAML files! Use !secret instead."
             exit 1
           fi
-          echo "✅ Security Check Passed: No hardcoded secrets found."
+          echo "✅ Security Check Passed."
 
       - name: 🏗️ Compile firmware (Dry Run)
-        # To najcięższy krok - sprawdza czy kod C++ się faktycznie buduje
         run: esphome compile voice_assistant.yaml
 
       - name: 📂 Check structure consistency
@@ -63,4 +59,3 @@ jobs:
               exit 1
             fi
           done
-          echo "✅ Project structure is valid."
