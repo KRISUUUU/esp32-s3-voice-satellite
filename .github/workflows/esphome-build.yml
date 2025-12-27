@@ -27,11 +27,13 @@ jobs:
         run: pip install esphome
 
       - name: 🔐 Create dummy secrets.yaml
+        # Tworzymy poprawne technicznie sekrety dla kompilatora
         run: |
           cat > secrets.yaml << EOF
           wifi_ssid: "CI_TEST_SSID"
           wifi_password: "CI_TEST_PASSWORD"
-          api_key: "dGVzdF9hcGlfa2V5X2Zvcl9naXRodWJfYWN0aW9ucw=="
+          # Poniższy klucz to poprawny base64 o długości 32 bajtów:
+          api_key: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
           ota_password: "ci_ota_password"
           ap_password: "ci_ap_password"
           EOF
@@ -48,6 +50,7 @@ jobs:
           echo "✅ Security Check Passed."
 
       - name: 🏗️ Compile firmware (Dry Run)
+        # Ten krok zajmie najwięcej czasu, budując kod C++
         run: esphome compile voice_assistant.yaml
 
       - name: 📂 Check structure consistency
