@@ -1,0 +1,71 @@
+# Contributing to ESP32-S3 Voice Satellite
+
+Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
+
+## 🐛 Reporting Bugs
+
+Before submitting a bug report:
+1. Check existing [Issues](../../issues) to avoid duplicates.
+2. Use the latest version of the firmware.
+3. Collect relevant information:
+   - ESPHome version
+   - ESP32-S3 board model
+   - Full log output (set `logger.level: DEBUG` in your yaml)
+   - Steps to reproduce
+
+## 💡 Suggesting Features
+
+Feature requests are welcome! Please:
+1. Check if the feature already exists or is planned.
+2. Clearly describe the use case.
+3. Explain why it would benefit the community.
+4. Consider if it fits the project's scope (voice satellite for Home Assistant).
+
+## 🔀 Pull Requests
+
+### Before Starting
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/amazing-feature`.
+3. For major changes, open an issue first to discuss.
+
+### Code Standards
+- **YAML files:** Follow ESPHome conventions, use 2-space indentation.
+- **Lambdas (C++):** Keep C++ code inside YAML clean and minimal.
+- **Comments:** Write clear comments for complex logic.
+- **Commits:** Use descriptive commit messages.
+
+### Testing
+Before submitting:
+1. Test on actual hardware (ESP32-S3) if possible.
+2. Verify all LED effects work correctly.
+3. Check that audio latency hasn't degraded.
+4. **IMPORTANT:** Ensure secrets (WiFi passwords, API keys) are NOT committed (check `.gitignore`).
+
+### Pull Request Process
+1. Update documentation if needed (README, comments).
+2. Add your changes to `CHANGELOG.md` (if present).
+3. Submit PR with a clear description of changes.
+4. Wait for review and address feedback.
+
+## 📝 Documentation
+
+Improvements to documentation are always appreciated:
+- Fix typos or unclear instructions.
+- Add troubleshooting tips.
+- Translate to other languages (e.g., Polish).
+- Create tutorials or videos.
+
+## 🤝 Code of Conduct
+
+- Be respectful and constructive.
+- Welcome newcomers and help them learn.
+- Focus on what's best for the community.
+- Accept constructive criticism gracefully.
+
+## 📧 Contact
+
+Questions? Open an [Issue](../../issues) or reach out via [Discussions](../../discussions).
+
+---
+
+**Happy Contributing! 🎉**

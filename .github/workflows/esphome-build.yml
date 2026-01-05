@@ -1,0 +1,61 @@
+name: Firmware Check
+
+on:
+  push:
+    branches: 
+      - main  # Uruchamiaj TYLKO przy pushu do głównej gałęzi
+    paths:
+      - '**.yaml'
+      - '.github/workflows/**'
+  # pull_request: # Zakomentowane/Usunięte, aby nie żarło minut przy każdym PR
+  workflow_dispatch: # Zostawiamy - pozwala Ci to odpalić test RĘCZNIE kiedy chcesz
+
+jobs:
+  build:
+    name: Validate & Compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Install ESPHome
+        run: pip install esphome
+
+      - name: 🔐 Create dummy secrets.yaml
+        run: |
+          cat > secrets.yaml << EOF
+          wifi_ssid: "CI_TEST_SSID"
+          wifi_password: "CI_TEST_PASSWORD"
+          api_key: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+          ota_password: "ci_ota_password"
+          ap_password: "ci_ap_password"
+          EOF
+
+      - name: 🔍 Validate YAML syntax
+        run: esphome config voice_assistant.yaml
+
+      - name: 🛡️ Security Check - Hardcoded Passwords
+        run: |
+          if grep -r "password: \"" *.yaml | grep -v "!secret" | grep -v "secrets.yaml"; then
+            echo "❌ CRITICAL ERROR: Found hardcoded passwords in YAML files! Use !secret instead."
+            exit 1
+          fi
+          echo "✅ Security Check Passed."
+
+      - name: 🏗️ Compile firmware (Dry Run)
+        run: esphome compile voice_assistant.yaml
+
+      - name: 📂 Check structure consistency
+        run: |
+          required_files="voice_assistant.yaml README.md README_EN.md LICENSE"
+          for file in $required_files; do
+            if [ ! -f "$file" ]; then
+              echo "❌ ERROR: Required file missing: $file"
+              exit 1
+            fi
+          done

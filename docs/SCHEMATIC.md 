@@ -1,0 +1,316 @@
+# 🔌 ESP32-S3 Voice Satellite – Schemat Połączeń
+
+Dokumentacja połączeń dla projektu **ESP32-S3 Voice Satellite**.  
+Układ oparty jest na **dwóch niezależnych magistralach I2S** - jedna dla mikrofonu, druga dla wzmacniaczy.
+
+---
+
+## 📐 Schemat Graficzny (Fritzing)
+
+![Schemat połączeń](wiring_diagram.png)
+
+*Schemat przedstawia kompletne połączenia sprzętowe wszystkich komponentów.*
+
+---
+
+## 🗺️ Mapa Pinów (Master Pinout)
+
+| Pin ESP32 | Funkcja | Podłączone Urządzenia | Typ Sygnału |
+|-----------|---------|------------------------|-------------|
+| **GPIO15** | `mic_bclk` | Mikrofon (SCK) | I2S Bit Clock |
+| **GPIO16** | `mic_lrclk` | Mikrofon (WS) | I2S Word Select |
+| **GPIO6** | `mic_data` | Mikrofon (SD) | I2S Data In |
+| **GPIO4** | `amp_bclk` | 2x Wzmacniacz (BCLK) | I2S Bit Clock |
+| **GPIO5** | `amp_lrclk` | 2x Wzmacniacz (LRC) | I2S Word Select |
+| **GPIO11** | `amp_data` | 2x Wzmacniacz (DIN) | I2S Data Out (równolegle) |
+| **GPIO21** | `led_pin` | LED Ring (DI) | WS2812B Data |
+| **3.3V** | Zasilanie | Mikrofon (VDD) | Power |
+| **5V** | Zasilanie | Wzmacniacze, LED | Power |
+| **GND** | Masa | **WSZYSTKIE** | Ground |
+
+---
+
+## 📐 Architektura Magistral I2S
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                        ESP32-S3                           │
+│                                                           │
+│  ┌─────────────────────┐         ┌─────────────────────┐  │
+│  │  I2S Bus #1 (Mic)   │         │  I2S Bus #2 (Amp)   │  │
+│  │  - BCLK: GPIO15     │         │  - BCLK: GPIO4      │  │
+│  │  - LRCLK: GPIO16    │         │  - LRCLK: GPIO5     │  │
+│  │  - DATA: GPIO6      │         │  - DATA: GPIO11     │  │
+│  └─────────────────────┘         └─────────────────────┘  │
+│                                                           │
+│              ┌─────────────────────┐                      │
+│              │  WS2812B Controller  │                     │
+│              │  - DATA: GPIO21      │                     │
+│              └─────────────────────┘                      │
+└───────────────────────────────────────────────────────────┘
+         │                     │                     │
+         ▼                     ▼                     ▼
+    Mikrofon            2x Wzmacniacz          LED Ring
+    (INMP441)           (MAX98357A)            (WS2812B)
+```
+
+---
+
+## ⚡ Schemat Zasilania (Power Distribution)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Zasilacz 5V 3A                          │
+└──────────┬──────────────────────────────────────────────────┘
+           │
+      [Bezpiecznik 3A] (opcjonalnie)
+           │
+           ├──────────► ESP32-S3 (VBUS - 5V)
+           │                │
+           │                └──► Wewnętrzny regulator 3.3V
+           │                         │
+           │                         └──► Mikrofon VDD (3.3V)
+           │
+           ├──────────► Wzmacniacz #1 (Vin)
+           │                │
+           │                ├──► SD (5V - Enable)
+           │                └──► GAIN (5V - Max volume 15dB)
+           │                │
+           │                └──[Kondensator 470µF]
+           │
+           ├──────────► Wzmacniacz #2 (Vin)
+           │                │
+           │                ├──► SD (5V - Enable)
+           │                └──► GAIN (5V - Max volume 15dB)
+           │                │
+           │                └──[Kondensator 470µF]
+           │
+           └──────────► LED Ring (5V)
+                            │
+                            └──[Kondensator 1000µF]
+
+         ╔══════════════════════════════════════════╗
+         ║  WSPÓLNA MASA (GND) DLA WSZYSTKICH       ║
+         ║  ESP32 + Mikrofon + 2x Amp + LED         ║
+         ╚══════════════════════════════════════════╝
+```
+
+---
+
+## 🎤 Szczegóły Połączeń - Mikrofon (INMP441)
+
+### Pinout INMP441
+```
+┌─────────────┐
+│   INMP441   │
+├─────────────┤
+│ VDD  ●      │ ← 3.3V (ESP32)  ⚠️ NIGDY 5V!
+│ GND  ●      │ ← GND
+│ SD   ●      │ ← GPIO6 (mic_data)
+│ WS   ●      │ ← GPIO16 (mic_lrclk)
+│ SCK  ●      │ ← GPIO15 (mic_bclk)
+│ L/R  ●      │ ← GND (Kanał lewy)
+└─────────────┘
+```
+
+### Konfiguracja w YAML
+```yaml
+microphone:
+  - platform: i2s_audio
+    id: mic_i2s
+    i2s_audio_id: i2s_mic_bus
+    i2s_din_pin: GPIO6
+    adc_type: external
+    pdm: false
+    channel: left        # L/R = GND
+    bits_per_sample: 32bit
+    sample_rate: 16000
+```
+
+---
+
+## 🔊 Szczegóły Połączeń - Wzmacniacze (2x MAX98357A)
+
+### Pinout MAX98357A (WAŻNE!)
+```
+┌─────────────────┐
+│   MAX98357A #1  │
+├─────────────────┤
+│ Vin   ●         │ ← 5V
+│ GND   ●         │ ← GND
+│ DIN   ●─────────┼─► GPIO11 (amp_data) ◄─┐
+│ BCLK  ●         │ ← GPIO4 (amp_bclk)    │ Równolegle
+│ LRC   ●         │ ← GPIO5 (amp_lrclk)   │
+│ SD    ●         │ ← 5V (Enable)         │
+│ GAIN  ●         │ ← 5V (15dB)           │
+└─────────────────┘                       │
+                                          │
+┌─────────────────┐                       │
+│   MAX98357A #2  │                       │
+├─────────────────┤                       │
+│ Vin   ●         │ ← 5V                  │
+│ GND   ●         │ ← GND                 │
+│ DIN   ●─────────┼─► GPIO11 (amp_data) ◄─┘
+│ BCLK  ●         │ ← GPIO4 (amp_bclk)
+│ LRC   ●         │ ← GPIO5 (amp_lrclk)
+│ SD    ●         │ ← 5V (Enable)
+│ GAIN  ●         │ ← 5V (15dB)
+└─────────────────┘
+```
+
+### Konfiguracja w YAML
+```yaml
+speaker:
+  - platform: i2s_audio
+    id: physical_speaker_output
+    i2s_audio_id: i2s_amp_bus
+    dac_type: external
+    i2s_dout_pin: GPIO11       # ← Oba wzmacniacze równolegle
+    channel: mono
+    bits_per_sample: 16bit
+    sample_rate: 48000
+```
+
+### Wyjaśnienie SD i GAIN
+| Pin | Podłączenie | Skutek |
+|-----|-------------|--------|
+| **SD** | GND | Wzmacniacz wyłączony (shutdown) |
+| **SD** | 5V | Wzmacniacz włączony + mono mix (L+R) |
+| **GAIN** | GND | Wzmocnienie 9dB |
+| **GAIN** | 5V | Wzmocnienie 15dB (maximum) |
+
+---
+
+## 💡 Szczegóły Połączeń - LED Ring (WS2812B)
+
+### Pinout WS2812B Ring
+```
+┌─────────────┐
+│  WS2812B    │
+│  12 LEDs    │
+├─────────────┤
+│ 5V   ●      │ ← 5V (+ Kondensator 1000µF)
+│ GND  ●      │ ← GND
+│ DI   ●      │ ← GPIO21 (led_pin)
+│ DO   ●      │ ← Nieużywany (wyjście do kolejnego ringu)
+└─────────────┘
+```
+
+### Konfiguracja w YAML
+```yaml
+light:
+  - platform: esp32_rmt_led_strip
+    id: led_ring
+    pin: GPIO21
+    num_leds: 12
+    rgb_order: GRB
+    chipset: WS2812
+```
+
+---
+
+## ⚠️ Lista Kontrolna Bezpieczeństwa
+
+### 🔴 KRYTYCZNE
+- [ ] Mikrofon **TYLKO 3.3V** (5V zniszczy go nieodwracalnie!)
+- [ ] Wspólna masa (GND) dla **WSZYSTKICH** komponentów
+- [ ] Kondensatory 470µF przy **KAŻDYM** wzmacniaczu
+- [ ] Kondensator 1000µF przy LED
+
+### 🟡 WAŻNE
+- [ ] SD i GAIN wzmacniaczy podłączone do 5V (nie GND)
+- [ ] GPIO11 (DIN) podłączone równolegle do obu wzmacniaczy
+- [ ] L/R mikrofonu podłączone do GND (kanał lewy)
+- [ ] Kierunek LED: DI (wejście) → DO (wyjście)
+
+### 🟢 OPCJONALNE
+- [ ] Bezpiecznik 3A na linii zasilania
+- [ ] Kondensatory dodatkowe 100nF (ceramiczne) przy każdym IC
+- [ ] Skręcone pary przewodów dla sygnałów I2S (redukcja EMI)
+
+---
+
+## 🔧 Zaawansowane - Mixer Architecture
+
+### Przepływ Audio (Audio Flow)
+```
+Mikrofon (16kHz 32-bit)
+    │
+    ▼
+┌──────────────────┐
+│  Micro Wake Word │ (Lokalna detekcja)
+└──────────────────┘
+    │
+    ▼
+┌──────────────────┐
+│ Voice Assistant  │ (Home Assistant Pipeline)
+└──────────────────┘
+    │
+    ├──► Announcement Input (FLAC 48kHz)
+    │        │
+    │        ▼
+    │    ┌─────────────────┐
+    │    │  Mixer Speaker  │
+    │    └─────────────────┘
+    │        │
+    └──► Media Input (48kHz)
+         │
+         ▼
+    Physical Speaker Output (GPIO11)
+         │
+         ├──► MAX98357A #1
+         └──► MAX98357A #2
+```
+
+---
+
+## 📊 Parametry Elektryczne
+
+### Pobór Prądu (Typowy)
+| Komponent | Stan | Pobór |
+|-----------|------|-------|
+| ESP32-S3 | Idle | ~80mA |
+| ESP32-S3 | Active (Audio) | ~150mA |
+| Mikrofon INMP441 | Active | ~1.4mA |
+| MAX98357A (x2) | Idle (SD=5V) | ~10mA |
+| MAX98357A (x2) | Max Volume | ~1.5A |
+| LED WS2812B (12x) | Full White | ~700mA |
+| **SUMA** | **Worst Case** | **~2.5A** |
+
+### Zalecane Zasilanie
+- **Minimalne:** 5V 2.5A (stabilizowane)
+- **Zalecane:** 5V 3A (stabilizowane)
+- **Optymalne:** 5V 5A (jeśli planujesz dodać więcej LED)
+
+---
+
+## 🧪 Testowanie Połączeń
+
+### Multimetr - Pomiary DC
+1. **Przed włączeniem:**
+   - Zmierz rezystancję między 5V a GND (powinno być >1kΩ)
+   - Sprawdź czy 3.3V i 5V nie są zwarte
+
+2. **Po włączeniu (bez głośników):**
+   - VDD mikrofonu = 3.3V ± 0.1V
+   - Vin wzmacniaczy = 5V ± 0.2V
+   - 5V LED = 5V ± 0.2V
+
+### Oscyloskop - Pomiary AC (opcjonalnie)
+- GPIO15 (BCLK): Prostokąt, częstotliwość zależna od konfiguracji
+- GPIO16 (LRCLK): Prostokąt, 16kHz (mic) lub 48kHz (amp)
+- GPIO6 (Mic Data): Cyfrowy sygnał audio
+- GPIO11 (Amp Data): Cyfrowy sygnał audio
+
+---
+
+## 📚 Dokumenty Referencyjne
+
+- [ESP32-S3 Datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf)
+- [INMP441 Datasheet](https://invensense.tdk.com/wp-content/uploads/2015/02/INMP441.pdf)
+- [MAX98357A Datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX98357A-MAX98357B.pdf)
+- [WS2812B Datasheet](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf)
+
+---
+
+*Ostatnia aktualizacja: 2025-01-05
