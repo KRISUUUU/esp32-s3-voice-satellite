@@ -10,6 +10,10 @@
 
 > ✅ **Project Status:** Stable production release with full media player support and advanced LED effects.
 
+> 💡 **Advanced hobbyist project built with passion.**
+>
+> **A note from the author:** I am not a professional programmer – I develop this project with the support of AI. It is the result of my experiments and passion for home automation. While the code is stable and field-tested in my own setup, I am always open to improvements. If you are a developer, your Pull Requests are more than welcome!
+
 Advanced voice satellite for Home Assistant based on ESP32-S3. The project uses two independent I2S buses for high-quality audio and a WS2812B LED ring for visual feedback.
 
 ## ✨ Features

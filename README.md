@@ -10,6 +10,10 @@
 
 > ✅ **Status Projektu:** Stabilna wersja produkcyjna z pełnym wsparciem media player i zaawansowanymi efektami LED.
 
+> 💡 **Zaawansowany projekt hobbystyczny stworzony z pasji (Built with passion).**
+>
+> **Ważna nota od autora:** Nie jestem zawodowym programistą – projekt rozwijam przy wsparciu AI. To wynik moich eksperymentów i pasji do automatyki domowej. Kod jest stabilny i sprawdzony w moim własnym domu, ale jeśli jesteś deweloperem i widzisz pole do poprawek – Twoje Pull Requesty są mile widziane!
+
 Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wykorzystuje dwie niezależne magistrale I2S dla dźwięku wysokiej jakości oraz pierścień LED WS2812B dla wizualnej informacji zwrotnej.
 
 ## ✨ Funkcje
