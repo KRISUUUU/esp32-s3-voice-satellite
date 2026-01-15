@@ -3,26 +3,31 @@
 # ESP32-S3 Voice Satellite dla Home Assistant
 
 ![Status Projektu](https://img.shields.io/badge/Status-Stable-green)
-![ESPHome](https://img.shields.io/badge/ESPHome-2025.12.0+-blue)
+![ESPHome](https://img.shields.io/badge/ESPHome-2025.12.5+-blue)
 ![Framework](https://img.shields.io/badge/Framework-ESP--IDF-orange)
 ![Licencja](https://img.shields.io/badge/licencja-MIT-grey)
 [![BuyCoffee](https://img.shields.io/badge/BuyCoffee.to-Wspieraj-green?logo=buy-me-a-coffee&logoColor=white)](https://buycoffee.to/Krisuuuu)
 
-> ✅ **Status Projektu:** Stabilna wersja produkcyjna z pełnym wsparciem media player i zaawansowanymi efektami LED.
+> ✅ **Status Projektu:** Stabilna wersja produkcyjna 2.0.0 z pełnym wsparciem media player, zaawansowanymi efektami LED i **podwójną magistralą I2S**.
 
 > 💡 **Zaawansowany projekt hobbystyczny stworzony z pasji (Built with passion).**
 >
 > **Ważna nota od autora:** Nie jestem zawodowym programistą – projekt rozwijam przy wsparciu AI. To wynik moich eksperymentów i pasji do automatyki domowej. Kod jest stabilny i sprawdzony w moim własnym domu, ale jeśli jesteś deweloperem i widzisz pole do poprawek – Twoje Pull Requesty są mile widziane!
 
-Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wykorzystuje dwie niezależne magistrale I2S dla dźwięku wysokiej jakości oraz pierścień LED WS2812B dla wizualnej informacji zwrotnej.
+"Zaawansowany" satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wykorzystuje **dwie niezależne magistrale I2S** dla dźwięku wysokiej jakości oraz pierścień LED WS2812B dla wizualnej informacji zwrotnej.
+
+---
 
 ## ✨ Funkcje
 
 ### 🎤 Audio
-- **3 Wake Words:** Alexa, Okay Nabu, Hey Jarvis (lokalna detekcja)
+- **Wake Word:** "Okay Nabu" (lokalna detekcja z Hardware VAD)
+- **Dual I2S Bus Architecture:** Oddzielne magistrale dla mikrofonu i wzmacniaczy
 - **Dual Mono Output:** 2x MAX98357A na wspólnej linii danych (zwiększona głośność)
 - **Media Player:** Jednoczesne odtwarzanie ogłoszeń i muzyki (mixer)
-- **Wysoka jakość:** 32-bit mikrofon (16kHz), 16-bit wzmacniacze (48kHz)
+- **Wysoka jakość:** 32-bit mikrofon (16kHz), 16-bit wzmacniacze (24kHz)
+- **Hardware VAD:** Sprzętowa detekcja aktywności głosowej dla eliminacji ciszy
+- **Optymalizacja:** Niskie opóźnienia dzięki zoptymalizowanemu pipeline audio (24kHz WAV)
 
 ### 💡 LED (WS2812B)
 - **Boot Filling:** Stopniowe zapełnianie przy starcie (cyan)
@@ -31,11 +36,31 @@ Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wy
 - **Thinking Pulse:** Niebieski pulsujący efekt
 - **Speaking Reverse:** Fioletowy odwrotny wirujący efekt
 - **Error:** Czerwone mruganie
+- **Mute:** Czerwony stały 30%
 
 ### 🎛️ Sterowanie
 - **Mute Switch:** Wyciszenie mikrofonu (czerwony LED)
 - **Push-to-Talk:** Przycisk w Home Assistant
 - **Auto Re-Arm:** Automatyczne ponowne uruchomienie wake word
+- **Smart Boot Sequence:** Inteligentna sekwencja startowa z detekcją połączenia
+
+---
+
+## 🆕 Co nowego w wersji 2.0.0?
+
+### Architektura Dual I2S Bus
+Projekt został przeprojektowany na **dwie niezależne magistrale I2S**:
+- **Magistrala #1:** Mikrofon INMP441 (GPIO15, GPIO16, GPIO6)
+- **Magistrala #2:** Wzmacniacze MAX98357A (GPIO4, GPIO5, GPIO11)
+
+### Inne kluczowe zmiany:
+- ✅ Hardware VAD dla eliminacji ciszy
+- ✅ Custom partition table dla 16MB Flash
+- ✅ Zoptymalizowany pipeline audio (24kHz)
+- ✅ Uproszczony wake word (tylko "Okay Nabu")
+- ✅ Ulepszone bufory audio dla stabilności
+
+📋 **Pełna lista zmian:** Zobacz [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -43,7 +68,7 @@ Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wy
 
 | Element | Model | Ilość | Uwagi |
 |---------|-------|-------|-------|
-| **MCU** | ESP32-S3 DevKitC-1 N8R16 | 1 | 8MB Flash / 16MB PSRAM |
+| **MCU** | ESP32-S3 DevKitC-1 N16R8/N16R16 | 1 | 16MB Flash / 8-16MB PSRAM (Octal) |
 | **Mikrofon** | INMP441 | 1 | I2S MEMS |
 | **Wzmacniacz** | MAX98357A | 2 | Równolegle na GPIO11 |
 | **LED** | WS2812B Ring | 1 | 12 diod |
@@ -83,6 +108,7 @@ Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wy
 
 > ⚠️ **KRYTYCZNE:**
 > - Mikrofon **TYLKO 3.3V** (5V zniszczy układ!)
+> - **DWA OSOBNE magistrale I2S** - nie używaj tych samych pinów!
 > - Kondensatory 470µF przy **każdym** wzmacniaczu i LED
 > - Wspólna masa (GND) dla wszystkich komponentów
 > - SD i GAIN wzmacniaczy podłączone do 5V (pełna głośność)
@@ -98,7 +124,7 @@ Zaawansowany satelita głosowy dla Home Assistant oparty na ESP32-S3. Projekt wy
 ## 🚀 Instalacja (Home Assistant)
 
 ### Krok 1: Przygotuj Secrets
-Otwórz plik `secrets.yaml` w ESPHome (przycisk **"Secrets"** w prawym górnym rogu) i dodaj:
+Otwórz plik `secrets.yaml` w ESPHome (przycisk **"Secrets"** w prawym górnym rogu) i dodaj (czego brakuje):
 
 ```yaml
 wifi_ssid: "Twoja_Nazwa_WiFi"
@@ -150,9 +176,10 @@ ap_password: "haslo_recovery_AP"
 
 ### Audio
 - **Mikrofon:** 16kHz, 32-bit, Mono
-- **Wzmacniacze:** 48kHz, 16-bit, Mono
-- **Latency:** ~300ms (wake word → odpowiedź)
-- **Wake Word:** 3 modele (Alexa/Nabu/Jarvis), próg 0.7
+- **Wzmacniacze:** 24kHz, 16-bit, Mono
+- **Latency:** ~200ms (wake word → odpowiedź)
+- **Wake Word:** "Okay Nabu", próg 0.35
+- **VAD:** Hardware Voice Activity Detection
 
 ### Sieć
 - **WiFi:** 2.4GHz, Static IP
@@ -161,7 +188,8 @@ ap_password: "haslo_recovery_AP"
 
 ### Wydajność
 - **CPU:** 240MHz (ESP32-S3)
-- **RAM:** 512KB + 16MB PSRAM (Octal 80MHz)
+- **RAM:** 512KB + 8-16MB PSRAM (Octal 80MHz)
+- **Flash:** 16MB z custom partition table
 - **Temperatura:** ~45-55°C przy obciążeniu
 
 ---
@@ -172,6 +200,7 @@ ap_password: "haslo_recovery_AP"
 - Sprawdź zasilanie wzmacniaczy (5V, min. 2A)
 - Upewnij się, że SD i GAIN są podłączone do 5V
 - Dodaj kondensatory 470µF przy wzmacniaczach
+- **Sprawdź czy używasz dwóch osobnych magistral I2S**
 
 ### 🎤 Mikrofon nie działa
 - ⚠️ **Sprawdź napięcie:** VDD = 3.3V (NIE 5V!)
@@ -229,8 +258,8 @@ esp32-s3-voice-satellite/
 - **Licencja:** MIT
 
 ### Firmware
-- **Architektura:** Monolithic YAML, Dual I2S Bus
-- **Optymalizacje:** ESP-IDF, PSRAM, 32-bit audio
+- **Architektura:** Dual I2S Bus, Hardware VAD, Custom Partition Table
+- **Optymalizacje:** ESP-IDF, PSRAM Octal, 32-bit audio
 - **Autor:** [Krzysztof / @KRISUUUU](https://github.com/KRISUUUU)
 
 ---
