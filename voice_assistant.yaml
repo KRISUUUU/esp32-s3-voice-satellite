@@ -60,11 +60,6 @@ esphome:
     - priority: 600
       then:
         - script.execute: boot_sequence_smart
-        
-  # Custom partition table for 16MB Flash models
-  # Niestandardowa tabela partycji dla modeli 16MB Flash
-  platformio_options:
-    board_build.partitions: https://raw.githubusercontent.com/espressif/arduino-esp32/master/tools/partitions/default_16MB.csv
 
 esp32:
   board: esp32-s3-devkitc-1
