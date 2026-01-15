@@ -3,26 +3,31 @@
 # ESP32-S3 Voice Satellite for Home Assistant
 
 ![Project Status](https://img.shields.io/badge/Status-Stable-green)
-![ESPHome](https://img.shields.io/badge/ESPHome-2025.12.0+-blue)
+![ESPHome](https://img.shields.io/badge/ESPHome-2025.12.5+-blue)
 ![Framework](https://img.shields.io/badge/Framework-ESP--IDF-orange)
 ![License](https://img.shields.io/badge/License-MIT-grey)
 [![BuyCoffee](https://img.shields.io/badge/BuyCoffee.to-Support-green?logo=buy-me-a-coffee&logoColor=white)](https://buycoffee.to/Krisuuuu)
 
-> ✅ **Project Status:** Stable production release with full media player support and advanced LED effects.
+> ✅ **Project Status:** Stable production release 2.0.0 with full media player support, advanced LED effects, and **dual I2S bus architecture**.
 
 > 💡 **Advanced hobbyist project built with passion.**
 >
 > **A note from the author:** I am not a professional programmer – I develop this project with the support of AI. It is the result of my experiments and passion for home automation. While the code is stable and field-tested in my own setup, I am always open to improvements. If you are a developer, your Pull Requests are more than welcome!
 
-Advanced voice satellite for Home Assistant based on ESP32-S3. The project uses two independent I2S buses for high-quality audio and a WS2812B LED ring for visual feedback.
+Advanced voice satellite for Home Assistant based on ESP32-S3. The project uses **two independent I2S buses** for high-quality audio and a WS2812B LED ring for visual feedback.
+
+---
 
 ## ✨ Features
 
 ### 🎤 Audio
-- **3 Wake Words:** Alexa, Okay Nabu, Hey Jarvis (local detection)
+- **Wake Word:** "Okay Nabu" (local detection with Hardware VAD)
+- **Dual I2S Bus Architecture:** Separate buses for microphone and amplifiers
 - **Dual Mono Output:** 2x MAX98357A on shared data line (increased volume)
 - **Media Player:** Simultaneous announcements and music playback (mixer)
-- **High Quality:** 32-bit microphone (16kHz), 16-bit amplifiers (48kHz)
+- **High Quality:** 32-bit microphone (16kHz), 16-bit amplifiers (24kHz)
+- **Hardware VAD:** Hardware Voice Activity Detection for silence suppression
+- **Optimization:** Low latency through optimized audio pipeline (24kHz WAV)
 
 ### 💡 LED (WS2812B)
 - **Boot Filling:** Progressive filling on startup (cyan)
@@ -31,11 +36,31 @@ Advanced voice satellite for Home Assistant based on ESP32-S3. The project uses 
 - **Thinking Pulse:** Blue pulsing effect
 - **Speaking Reverse:** Purple reverse spinning effect
 - **Error:** Red blinking
+- **Mute:** Red solid 30%
 
 ### 🎛️ Controls
 - **Mute Switch:** Microphone mute (red LED)
 - **Push-to-Talk:** Button in Home Assistant
 - **Auto Re-Arm:** Automatic wake word restart
+- **Smart Boot Sequence:** Intelligent startup sequence with connection detection
+
+---
+
+## 🆕 What's new in version 2.0.0?
+
+### Dual I2S Bus Architecture
+The project has been redesigned with **two independent I2S buses**:
+- **Bus #1:** INMP441 Microphone (GPIO15, GPIO16, GPIO6)
+- **Bus #2:** MAX98357A Amplifiers (GPIO4, GPIO5, GPIO11)
+
+### Other key changes:
+- ✅ Hardware VAD for silence suppression
+- ✅ Custom partition table for 16MB Flash
+- ✅ Optimized audio pipeline (24kHz)
+- ✅ Simplified wake word (only "Okay Nabu")
+- ✅ Improved audio buffers for stability
+
+📋 **Full changelog:** See [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -43,7 +68,7 @@ Advanced voice satellite for Home Assistant based on ESP32-S3. The project uses 
 
 | Component | Model | Qty | Notes |
 |-----------|-------|-----|-------|
-| **MCU** | ESP32-S3 DevKitC-1 N8R16 | 1 | 8MB Flash / 16MB PSRAM |
+| **MCU** | ESP32-S3 DevKitC-1 N16R8/N16R16 | 1 | 16MB Flash / 8-16MB PSRAM (Octal) |
 | **Microphone** | INMP441 | 1 | I2S MEMS |
 | **Amplifier** | MAX98357A | 2 | Parallel on GPIO11 |
 | **LED** | WS2812B Ring | 1 | 12 LEDs |
@@ -83,6 +108,7 @@ Advanced voice satellite for Home Assistant based on ESP32-S3. The project uses 
 
 > ⚠️ **CRITICAL:**
 > - Microphone **ONLY 3.3V** (5V will destroy it!)
+> - **TWO SEPARATE I2S buses** - do not use the same pins!
 > - 470µF capacitors at **each** amplifier and LED
 > - Common ground (GND) for all components
 > - SD and GAIN of amplifiers connected to 5V (full volume)
@@ -150,9 +176,10 @@ ap_password: "recovery_AP_password"
 
 ### Audio
 - **Microphone:** 16kHz, 32-bit, Mono
-- **Amplifiers:** 48kHz, 16-bit, Mono
-- **Latency:** ~300ms (wake word → response)
-- **Wake Word:** 3 models (Alexa/Nabu/Jarvis), threshold 0.7
+- **Amplifiers:** 24kHz, 16-bit, Mono
+- **Latency:** ~200ms (wake word → response)
+- **Wake Word:** "Okay Nabu", threshold 0.35
+- **VAD:** Hardware Voice Activity Detection
 
 ### Network
 - **WiFi:** 2.4GHz, Static IP
@@ -161,7 +188,8 @@ ap_password: "recovery_AP_password"
 
 ### Performance
 - **CPU:** 240MHz (ESP32-S3)
-- **RAM:** 512KB + 16MB PSRAM (Octal 80MHz)
+- **RAM:** 512KB + 8-16MB PSRAM (Octal 80MHz)
+- **Flash:** 16MB with custom partition table
 - **Temperature:** ~45-55°C under load
 
 ---
@@ -172,6 +200,7 @@ ap_password: "recovery_AP_password"
 - Check amplifier power supply (5V, min. 2A)
 - Ensure SD and GAIN are connected to 5V
 - Add 470µF capacitors at amplifiers
+- **Check if using two separate I2S buses**
 
 ### 🎤 Microphone not working
 - ⚠️ **Check voltage:** VDD = 3.3V (NOT 5V!)
@@ -229,8 +258,8 @@ esp32-s3-voice-satellite/
 - **License:** MIT
 
 ### Firmware
-- **Architecture:** Monolithic YAML, Dual I2S Bus
-- **Optimizations:** ESP-IDF, PSRAM, 32-bit audio
+- **Architecture:** Dual I2S Bus, Hardware VAD, Custom Partition Table
+- **Optimizations:** ESP-IDF, PSRAM Octal, 32-bit audio
 - **Author:** [Krzysztof / @KRISUUUU](https://github.com/KRISUUUU)
 
 ---

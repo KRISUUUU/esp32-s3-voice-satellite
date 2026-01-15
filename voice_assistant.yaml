@@ -1,28 +1,27 @@
 # ==============================================================================
-# PROJECT: ESP32-S3 Voice Satellite for Home Assistant
-# PROJEKT: Satelita Głosowy ESP32-S3 dla Home Assistant
+# PROJECT: ESP32-S3 Voice Satellite for Home Assistant (Performance Edition)
+# PROJEKT: Satelita Głosowy ESP32-S3 dla Home Assistant (Wersja Wydajna)
 # ==============================================================================
-# DESCRIPTION: High-performance voice assistant node with LED feedback
-# OPIS: Wysokowydajny węzeł asystenta głosowego z informacją zwrotną LED
+# DESCRIPTION: High-performance voice assistant with VAD and 16MB Flash support
+# OPIS: Wysokowydajny asystent głosowy z VAD i obsługą 16MB Flash
 #
 # FEATURES / FUNKCJE:
-# - Multi-model wake word detection (Alexa, Nabu, Jarvis)
-# - Visual LED feedback for all voice assistant states
-# - I2S microphone and speaker support
-# - Mixer for simultaneous announcement and media playback
-# - Low latency audio processing with PSRAM
+# - Hardware VAD (Voice Activity Detection) for silence suppression
+# - Sprzętowa detekcja mowy (VAD) do eliminacji ciszy
+# - Optimized Audio Pipeline (24kHz WAV) for low latency
+# - Zoptymalizowany tor audio (24kHz WAV) dla niskich opóźnień
+# - Advanced LED feedback / Zaawansowana sygnalizacja LED
+# - Dual I2S Bus / Podwójna magistrala I2S
 #
 # HARDWARE REQUIREMENTS / WYMAGANIA SPRZĘTOWE:
-# - ESP32-S3 with 8MB Flash and Octal PSRAM
-# - I2S Microphone (INMP441 or similar)
-# - I2S Amplifier (MAX98357A or similar)
-# - WS2812B LED Ring (12 LEDs)
+# - ESP32-S3 with 16MB Flash and Octal PSRAM (N16R8/N16R16)
+# - I2S Microphone (INMP441)
+# - I2S Amplifier (MAX98357A x2)
+# - WS2812B LED Ring
 #
-# NETWORK CONFIGURATION / KONFIGURACJA SIECIOWA:
-# - Static IP: 10.0.50.177 (Change in 'wifi' section if needed)
-# - Statyczny IP: 10.0.50.177 (Zmień w sekcji 'wifi' w razie potrzeby)
+# NETWORK / SIEĆ:
+# - Static IP: 10.0.50.177
 # - Gateway: 10.0.50.1
-# - DNS: 8.8.8.8
 #
 # SECURITY / BEZPIECZEŃSTWO:
 # - Ensure 'secrets.yaml' is NOT committed to git
@@ -33,7 +32,7 @@ substitutions:
   name: "esp32-s3-voice-satellite"
   friendly_name: "Asystent Głosowy"
   project_name: "KRISUUUU.voice-satellite"
-  project_version: "1.0.0" 
+  project_version: "2.0.0" 
   
   # Hardware Pin Configuration / Konfiguracja Pinów Sprzętowych
   mic_bclk: GPIO15      # Microphone Bit Clock
@@ -55,15 +54,21 @@ esphome:
   name: ${name}
   friendly_name: ${friendly_name}
   name_add_mac_suffix: true
-  min_version: 2025.12.0
+  min_version: 2025.12.5
   
   on_boot:
     - priority: 600
       then:
         - script.execute: boot_sequence_smart
+        
+  # Custom partition table for 16MB Flash models
+  # Niestandardowa tabela partycji dla modeli 16MB Flash
+  platformio_options:
+    board_build.partitions: https://raw.githubusercontent.com/espressif/arduino-esp32/master/tools/partitions/default_16MB.csv
 
 esp32:
   board: esp32-s3-devkitc-1
+  flash_size: 16MB
   framework:
     type: esp-idf
     sdkconfig_options:
@@ -71,20 +76,23 @@ esp32:
       CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
       CONFIG_ESP32S3_INST_CACHE_64KB: "y"
       CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE: "4096"
-  flash_size: 8MB
+      CONFIG_ESP_MAIN_TASK_STACK_SIZE: "8192"
 
 psram:
   mode: octal
   speed: 80MHz
+  ignore_not_found: false
 
 # ==============================================================================
 # NETWORK CONFIGURATION / KONFIGURACJA SIECIOWA
 # ==============================================================================
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
   power_save_mode: NONE
+  fast_connect: true
   manual_ip:
     static_ip: 10.0.50.177
     gateway: 10.0.50.1
@@ -99,24 +107,11 @@ api:
     key: !secret api_key
   
   on_client_connected:
-    - logger.log: "API Connected - System Ready"
-    - if:
-        condition:
-          not: 
-            script.is_running: boot_sequence_smart
-        then:
-          - light.turn_on:
-              id: led_ring
-              brightness: 80%
-              effect: "Connection Breathe"
-          - delay: 3s
-          - light.turn_off: led_ring
-    
+    - logger.log: "API Connected - Full Debug Active"
     - if:
         condition:
           and:
-            - not: 
-                micro_wake_word.is_running:
+            - not: { micro_wake_word.is_running: }
             - switch.is_off: mute_switch
         then:
           - micro_wake_word.start:
@@ -125,113 +120,19 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
+safe_mode:
+
+# ==============================================================================
+# LOGGING & DEBUGGING / LOGOWANIE I DIAGNOSTYKA
+# ==============================================================================
+
 logger:
   level: INFO
   baud_rate: 115200
-
-# ==============================================================================
-# SENSORS / CZUJNIKI
-# ==============================================================================
-
-sensor:
-  - platform: wifi_signal
-    name: "Siła Sygnału WiFi"
-    update_interval: 300s
-    entity_category: diagnostic
-    
-  - platform: uptime
-    name: "Czas Pracy"
-    update_interval: 300s
-    entity_category: diagnostic
-    
-  - platform: internal_temperature
-    name: "Temperatura CPU"
-    entity_category: diagnostic
-    update_interval: 120s
-
-text_sensor:
-  - platform: wifi_info
-    ip_address:
-      name: "Adres IP"
-      
-  - platform: version
-    name: "Wersja ESPHome"
-
-# ==============================================================================
-# CONTROLS / STEROWANIE
-# ==============================================================================
-
-switch:
-  - platform: template
-    name: "Wycisz Mikrofon"
-    id: mute_switch
-    icon: "mdi:microphone-off"
-    optimistic: true
-    restore_mode: ALWAYS_OFF
-    
-    turn_on_action:
-      - micro_wake_word.stop:
-      - logger.log: "Microphone Muted"
-      - light.turn_on:
-          id: led_ring
-          brightness: 30%
-          red: 100%
-          green: 0%
-          blue: 0%
-          effect: none
-    
-    turn_off_action:
-      - light.turn_off: led_ring
-      - micro_wake_word.start:
-      - logger.log: "Microphone Unmuted"
-
-button:
-  - platform: restart
-    name: "Restart Urządzenia"
-    entity_category: config
-    
-  - platform: template
-    name: "Uruchom Asystenta"
-    icon: "mdi:account-voice"
-    on_press:
-      - voice_assistant.start:
-
-# ==============================================================================
-# BOOT SEQUENCE / SEKWENCJA STARTOWA
-# ==============================================================================
-
-script:
-  - id: boot_sequence_smart
-    then:
-      # Boot animation / Animacja startowa
-      - light.turn_on:
-          id: led_ring
-          brightness: 60%
-          effect: "Boot Filling"
-      - delay: 3600ms
-      - light.turn_off: led_ring
-      
-      # Connection confirmation / Potwierdzenie połączenia
-      - if:
-          condition:
-            api.connected:
-          then:
-            - light.turn_on:
-                id: led_ring
-                brightness: 80%
-                effect: "Connection Breathe"
-            - delay: 2000ms
-            - light.turn_off: led_ring
-      
-      # Start wake word detection / Uruchom wykrywanie słowa aktywującego
-      - if:
-          condition:
-            and:
-              - not: 
-                  micro_wake_word.is_running:
-              - switch.is_off: mute_switch
-          then:
-            - micro_wake_word.start:
+  logs:
+    i2s_audio: WARN
+    sensor: WARN
+    esp32_rmt_led_strip: WARN
 
 # ==============================================================================
 # AUDIO HARDWARE / SPRZĘT AUDIO
@@ -254,7 +155,7 @@ microphone:
     adc_type: external
     pdm: false
     channel: left
-    bits_per_sample: 32bit 
+    bits_per_sample: 32bit
     sample_rate: 16000
     mclk_multiple: 256
 
@@ -267,31 +168,90 @@ speaker:
     i2s_dout_pin: ${amp_data}
     channel: mono
     bits_per_sample: 16bit
-    sample_rate: 48000
+    sample_rate: 24000
     mclk_multiple: 256
+    buffer_duration: 500ms
+    timeout: 200ms
 
-  # Speaker mixer for simultaneous playback
-  # Mikser głośnika dla jednoczesnego odtwarzania
+  # Speaker mixer / Mikser głośnika
   - platform: mixer
     id: main_speaker_mixer
     output_speaker: physical_speaker_output
     source_speakers:
-      - id: announcement_input  # Voice assistant responses
-      - id: media_input         # Media playback
+      - id: announcement_input
+        buffer_duration: 600ms
+        timeout: 10s
+      - id: media_input
+        buffer_duration: 1000ms
+        timeout: 10s
 
 media_player:
   - platform: speaker
     name: "Odtwarzacz Asystenta"
     id: voice_media_player
+    volume_min: 0.1
+    volume_max: 1.0
     announcement_pipeline:
       speaker: announcement_input
-      format: FLAC
-      sample_rate: 48000
+      format: WAV
+      sample_rate: 24000
       num_channels: 1
     media_pipeline:
       speaker: media_input
-      sample_rate: 48000
+      sample_rate: 24000
       num_channels: 1
+
+# ==============================================================================
+# SENSORS / CZUJNIKI
+# ==============================================================================
+
+sensor:
+  - platform: wifi_signal
+    name: "Siła Sygnału WiFi"
+    update_interval: 60s
+    entity_category: diagnostic
+    
+  - platform: uptime
+    name: "Czas Pracy"
+    update_interval: 300s
+    entity_category: diagnostic
+
+# ==============================================================================
+# CONTROLS / STEROWANIE
+# ==============================================================================
+
+switch:
+  - platform: template
+    name: "Wycisz Mikrofon"
+    id: mute_switch
+    icon: "mdi:microphone-off"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    
+    turn_on_action:
+      - micro_wake_word.stop:
+      - light.turn_on:
+          id: led_ring
+          brightness: 30%
+          effect: none
+          red: 100%
+          green: 0%
+          blue: 0%
+    
+    turn_off_action:
+      - light.turn_off: led_ring
+      - micro_wake_word.start:
+
+button:
+  - platform: restart
+    name: "Restart Urządzenia"
+    entity_category: config
+    
+  - platform: template
+    name: "Uruchom Asystenta"
+    icon: "mdi:account-voice"
+    on_press:
+      - voice_assistant.start:
 
 # ==============================================================================
 # LED EFFECTS / EFEKTY LED
@@ -307,119 +267,105 @@ light:
     chipset: WS2812
     restore_mode: ALWAYS_OFF
     effects:
-      # Boot animation - LEDs fill progressively
-      # Animacja startu - LEDy zapełniają się stopniowo
+      # Boot animation / Animacja startowa
       - addressable_lambda:
           name: "Boot Filling"
           update_interval: 30ms
           lambda: |-
             static int step = 0;
-            Color c_load = Color(0, 255, 200);
+            Color c = Color(0, 255, 200);
             it.all() = Color::BLACK;
-            for (int i = 0; i <= step; i++) {
-                if (i < it.size()) { it[i] = c_load; }
-            }
+            for (int i = 0; i <= step; i++) { if (i < it.size()) it[i] = c; }
             step++;
-            if (step >= it.size()) {
-               if (step > it.size() + 2) step = 0;
-            }
+            if (step > it.size() + 2) step = 0;
             
-      # Connection status - Green breathing effect
-      # Status połączenia - Zielony efekt oddychania
+      # Connection status / Status połączenia
       - addressable_lambda:
           name: "Connection Breathe"
           update_interval: 50ms
           lambda: |-
-            float breath = sin(millis() * 0.003f);
-            float brightness = (breath + 1.0f) / 2.0f;
-            if (brightness < 0.1f) brightness = 0.1f;
-            it.all() = Color(0, int(255 * brightness), 0);
+            float b = (sin(millis() * 0.003f) + 1.0f) / 2.0f;
+            if (b < 0.1f) b = 0.1f;
+            it.all() = Color(0, int(255 * b), 0);
             
-      # Listening state - Blue spinning effect
-      # Stan nasłuchiwania - Niebieski efekt wirujący
+      # Listening state / Stan nasłuchiwania
       - addressable_lambda:
           name: "Listening Double"
           update_interval: 60ms
           lambda: |-
-            static int step = 0;
+            static int s = 0;
             it.all() = Color::BLACK;
-            int size = it.size(); 
-            int half = size / 2;
-            Color c_head = Color(0, 0, 255);
-            Color c_tail1 = Color(0, 0, 150);
-            Color c_tail2 = Color(0, 0, 80);
-            Color c_tail3 = Color(0, 0, 20);
-            int h1 = step % size;
-            int h2 = (step + half) % size;
-            it[h1] = c_head;
-            it[(h1 - 1 + size) % size] = c_tail1;
-            it[(h1 - 2 + size) % size] = c_tail2;
-            it[(h1 - 3 + size) % size] = c_tail3;
-            it[h2] = c_head;
-            it[(h2 - 1 + size) % size] = c_tail1;
-            it[(h2 - 2 + size) % size] = c_tail2;
-            it[(h2 - 3 + size) % size] = c_tail3;
-            step++;
-            if (step >= size) step = 0;
+            int sz = it.size();
+            it[s % sz] = Color(0, 0, 255);
+            it[(s - 1 + sz) % sz] = Color(0, 0, 150);
+            it[(s + sz/2) % sz] = Color(0, 0, 255);
+            it[(s + sz/2 - 1 + sz) % sz] = Color(0, 0, 150);
+            s++; if (s >= sz) s = 0;
             
-      # Thinking state - Blue pulsing effect
-      # Stan myślenia - Niebieski efekt pulsujący
+      # Thinking state / Stan myślenia
       - addressable_lambda:
-         name: "Thinking Pulse"
-         update_interval: 40ms
-         lambda: |-
-            float breath = (sin(millis() / 300.0f) + 1.0f) / 2.0f;
-            float brightness = 0.2f + (0.8f * breath);
-            it.all() = Color(0, 0, int(255 * brightness));
+          name: "Thinking Pulse"
+          update_interval: 40ms
+          lambda: |-
+            float b = 0.2f + (0.8f * ((sin(millis() / 300.0f) + 1.0f) / 2.0f));
+            it.all() = Color(0, 0, int(255 * b));
             
-      # Speaking state - Purple reverse spinning
-      # Stan odpowiedzi - Fioletowy efekt wirujący w odwrotnym kierunku
+      # Speaking state / Stan odpowiedzi
       - addressable_lambda:
           name: "Speaking Reverse"
           update_interval: 60ms
           lambda: |-
-            static int step = 0;
+            static int s = 0;
             it.all() = Color::BLACK;
-            int size = it.size(); 
-            int half = size / 2;
-            Color c_head = Color(150, 0, 255);
-            Color c_tail1 = Color(100, 0, 150);
-            Color c_tail2 = Color(50, 0, 80);
-            Color c_tail3 = Color(10, 0, 20);
-            if (step > 10000) step = 0; 
-            int base = size * 100 - step;
-            int h1 = base % size;
-            int h2 = (base + half) % size;
-            it[h1] = c_head;
-            it[(h1 + 1) % size] = c_tail1;
-            it[(h1 + 2) % size] = c_tail2;
-            it[(h1 + 3) % size] = c_tail3;
-            it[h2] = c_head;
-            it[(h2 + 1) % size] = c_tail1;
-            it[(h2 + 2) % size] = c_tail2;
-            it[(h2 + 3) % size] = c_tail3;
-            step++;
+            int sz = it.size();
+            int base = sz * 100 - s;
+            it[base % sz] = Color(150, 0, 255);
+            it[(base + 1) % sz] = Color(100, 0, 150);
+            it[(base + sz/2) % sz] = Color(150, 0, 255);
+            it[(base + sz/2 + 1) % sz] = Color(100, 0, 150);
+            s++;
 
 # ==============================================================================
-# WAKE WORD DETECTION / WYKRYWANIE SŁOWA AKTYWUJĄCEGO
+# BOOT SEQUENCE / SEKWENCJA STARTOWA
+# ==============================================================================
+
+script:
+  - id: boot_sequence_smart
+    then:
+      - light.turn_on:
+          id: led_ring
+          brightness: 60%
+          effect: "Boot Filling"
+      - delay: 2s
+      - light.turn_off: led_ring
+      - if:
+          condition: { api.connected: }
+          then:
+            - light.turn_on:
+                id: led_ring
+                brightness: 80%
+                effect: "Connection Breathe"
+            - delay: 1s
+            - light.turn_off: led_ring
+      - if:
+          condition:
+            and: [ not: { micro_wake_word.is_running: }, switch.is_off: mute_switch ]
+          then:
+            - micro_wake_word.start:
+
+# ==============================================================================
+# WAKE WORD & VAD / WYKRYWANIE SŁOWA I DETEKCJA MOWY
 # ==============================================================================
 
 micro_wake_word:
   id: mww
   microphone: mic_i2s
+  vad:
+    model: https://github.com/esphome/micro-wake-word-models/raw/main/models/v2/vad.json
   models:
-    - model: "https://github.com/kahrendt/microWakeWord/releases/download/v2.1_models/alexa.json"
-      id: ww_alexa
-      probability_cutoff: 0.7
-      
     - model: "https://github.com/kahrendt/microWakeWord/releases/download/v2.1_models/okay_nabu.json"
       id: ww_nabu
-      probability_cutoff: 0.7
-      
-    - model: "https://github.com/kahrendt/microWakeWord/releases/download/v2.1_models/hey_jarvis.json"
-      id: ww_jarvis
-      probability_cutoff: 0.7
-    
+      probability_cutoff: 0.35
   on_wake_word_detected:
     - micro_wake_word.stop:
     - light.turn_on:
@@ -430,7 +376,7 @@ micro_wake_word:
         wake_word: !lambda return wake_word;
 
 # ==============================================================================
-# VOICE ASSISTANT / ASYSTENT GŁOSOWY
+# VOICE ASSISTANT LOGIC / LOGIKA ASYSTENTA GŁOSOWEGO
 # ==============================================================================
 
 voice_assistant:
@@ -438,7 +384,6 @@ voice_assistant:
   microphone: mic_i2s
   speaker: announcement_input
   micro_wake_word: mww
-  volume_multiplier: 4.0
   
   # Listening phase / Faza nasłuchiwania
   on_listening:
@@ -446,60 +391,52 @@ voice_assistant:
         id: led_ring
         brightness: 100%
         effect: "Listening Double"
-  
+        
   # Processing phase / Faza przetwarzania
   on_stt_vad_end:
     - light.turn_on:
         id: led_ring
         brightness: 100%
         effect: "Thinking Pulse"
-  
+        
   # Speaking phase / Faza odpowiedzi
   on_tts_stream_start:
-    - light.turn_off: led_ring
-    - delay: 50ms
     - light.turn_on:
         id: led_ring
         brightness: 100%
         effect: "Speaking Reverse"
-
+        
   # End of speech / Koniec mowy
   on_tts_stream_end:
+    - delay: 200ms
     - light.turn_off: led_ring
-
+    
   # Pipeline complete / Zakończenie pipeline
   on_end:
-    - delay: 1000ms
+    - delay: 500ms
     - if:
         condition:
           and:
-            - not: 
-                micro_wake_word.is_running:
+            - not: { micro_wake_word.is_running: }
             - switch.is_off: mute_switch
         then:
           - micro_wake_word.start:
-  
+          
   # Error handling / Obsługa błędów
   on_error:
-    - light.turn_off: led_ring
+    - logger.log: "⚠️ VOICE ERROR - RESTARTING LISTENER"
     - light.turn_on:
         id: led_ring
         brightness: 100%
         red: 100%
         green: 0%
         blue: 0%
-        effect: none
     - delay: 1s
     - light.turn_off: led_ring
     - if:
         condition:
           and:
-            - not: 
-                micro_wake_word.is_running:
+            - not: { micro_wake_word.is_running: }
             - switch.is_off: mute_switch
         then:
           - micro_wake_word.start:
-
-# ==============================================================================
-# END OF CONFIGURATION / KONIEC KONFIGURACJI
-# ==============================================================================
