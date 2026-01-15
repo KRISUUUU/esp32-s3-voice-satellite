@@ -55,7 +55,6 @@ Projekt został przeprojektowany na **dwie niezależne magistrale I2S**:
 
 ### Inne kluczowe zmiany:
 - ✅ Hardware VAD dla eliminacji ciszy
-- ✅ Custom partition table dla 16MB Flash
 - ✅ Zoptymalizowany pipeline audio (24kHz)
 - ✅ Uproszczony wake word (tylko "Okay Nabu")
 - ✅ Ulepszone bufory audio dla stabilności

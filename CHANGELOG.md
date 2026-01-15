@@ -56,11 +56,6 @@ This release introduces a complete redesign of the audio architecture with two i
   - Amplifiers: 16-bit @ 24kHz (reduced for efficiency)
   - Buffer durations optimized: 500ms (speaker), 600ms (announcements), 1000ms (media)
 
-- **Custom Partition Table**
-  - Full 16MB Flash utilization
-  - URL: `https://raw.githubusercontent.com/espressif/arduino-esp32/master/tools/partitions/default_16MB.csv`
-  - More space for wake word models and firmware
-
 ### 💡 LED System
 - All effects retained from v1.0.0
 - **Boot Filling** - Cyan progressive fill
@@ -112,11 +107,6 @@ This release introduces a complete redesign of the audio architecture with two i
 - **Fix:** Optimized sample rates and buffer durations
 - **Result:** ~200ms latency (wake word → response)
 
-### Memory Management
-- **Issue:** Random crashes during wake word detection
-- **Fix:** Custom partition table + PSRAM optimization
-- **Result:** Stable operation with sufficient memory headroom
-
 ### Boot Sequence Stability
 - **Issue:** Wake word sometimes not starting after boot
 - **Fix:** Improved boot_sequence_smart script with proper condition checks
@@ -164,7 +154,6 @@ This release introduces a complete redesign of the audio architecture with two i
 - Dual I2S Bus architecture explanation
 - Migration guide from v1.x to v2.0
 - Hardware VAD configuration details
-- Custom partition table usage
 
 ---
 
