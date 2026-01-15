@@ -55,7 +55,6 @@ The project has been redesigned with **two independent I2S buses**:
 
 ### Other key changes:
 - ✅ Hardware VAD for silence suppression
-- ✅ Custom partition table for 16MB Flash
 - ✅ Optimized audio pipeline (24kHz)
 - ✅ Simplified wake word (only "Okay Nabu")
 - ✅ Improved audio buffers for stability
